@@ -3,7 +3,7 @@ const axios = require('axios');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// 允许跨域
+// 跨域
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
   res.send('✅ 子节点服务正常运行');
 });
 
-// 优化后的抓取接口
+// 优化后的抓取接口，模拟浏览器请求，降低被风控概率
 app.get('/get-avatar', async (req, res) => {
   const { username } = req.query;
   if (!username) {
@@ -26,7 +26,7 @@ app.get('/get-avatar', async (req, res) => {
     const url = `https://www.tiktok.com/@${username}`;
     const { data } = await axios.get(url, {
       headers: {
-        // 用最新的Chrome UA，降低被风控概率
+        // 模拟真实浏览器UA，降低被风控概率
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
