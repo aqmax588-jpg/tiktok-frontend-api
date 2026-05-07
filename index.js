@@ -3,20 +3,17 @@ const axios = require('axios');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// 跨域保留原版，不改动
+// 跨域
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
 app.get('/', (req, res) => {
-  res.send('✅ TikTok 提速优化版接口正常运行');
+  res.send('✅ 子节点服务正常运行');
 });
 
-// 核心接口：原版抓取正则全部不动，只做网络层面提速优化
+// 优化后的抓取接口，解决风控和超时
 app.get('/get-avatar', async (req, res) => {
   const { username } = req.query;
   if (!username) {
@@ -26,20 +23,21 @@ app.get('/get-avatar', async (req, res) => {
   try {
     const url = `https://www.tiktok.com/@${username}`;
     const { data } = await axios.get(url, {
-      // 精简请求头，只保留必需，减少握手耗时
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0 Safari/537.36'
+        // 用最新版Chrome UA，降低被风控概率
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
       },
-      timeout: 8000,     // 优化超时，没必要过长等待
-      maxRedirects: 3,   // 限制重定向，去掉多余跳转加载
-      decompress: true   // 开启压缩，减少页面传输体积、提速
+      timeout: 10000, // 延长超时到10秒，避免网络波动失败
+      maxRedirects: 5,
+      decompress: true
     });
 
-    // 【你原版原生正则 完全一字不改】
+    // 正则匹配逻辑完全不变，只优化请求部分
     const avatarMatch = data.match(/"avatarThumb":"(.*?)"/);
     const nicknameMatch = data.match(/"nickname":"(.*?)"/);
     const uniqueIdMatch = data.match(/"uniqueId":"(.*?)"/);
-
     const followers = data.match(/"followerCount":(\d+)/)?.[1] || 0;
     const following = data.match(/"followingCount":(\d+)/)?.[1] || 0;
     const videos = data.match(/"videoCount":(\d+)/)?.[1] || 0;
@@ -58,12 +56,13 @@ app.get('/get-avatar', async (req, res) => {
       });
     }
 
-    throw new Error('no avatar');
+    throw new Error('no avatar found');
   } catch (e) {
+    console.error('抓取失败:', e.message);
     res.status(404).json({ error: 'failed' });
   }
 });
 
 app.listen(port, () => {
-  console.log('TikTok提速版接口运行成功');
+  console.log('✅ 子节点抓取服务运行正常');
 });
